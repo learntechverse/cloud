@@ -6,7 +6,7 @@
     }
 </style>
 
-# AWS Network High Level Details
+# AWS Infrastructure High Level Details
 
 ## Region
 **Definition:** A geographical area in which AWS has data centers. Each region is completely independent and isolated from the others.

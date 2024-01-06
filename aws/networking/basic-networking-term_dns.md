@@ -101,11 +101,15 @@ The Internet Corporation for Assigned Names and Numbers (ICANN) has authority ov
 ### Authoritative DNS servers
 These are the servers which provides actual answers to the DNS query. They will return back the corresponding IP address for the client’s requested domain name. In cases where a domain itself may have sub-domains (e.g. maps.google.com is a sub-domain of google.com), an authoritative server may deflect again, returning an IP address to another authoritative server tasked with handling DNS resolution for this sub-domain. Note that these authoritative servers may be managed directly by the domain owner, or through a DNS service provider.
 
+The Authoritative Name Server is the last stop in the name server query-it takes the hostname and returns the correct IP address to the DNS Resolver (or if it cannot find the domain, returns the message NXDOMAIN).
+
 While various caching mechanisms exist across the internet to speed up domain name resolutions, it's the authoritative servers that provide the correct and final answer when queried. Domain owners or administrators configure their domain's records, but the actual infrastructure—the DNS servers—is often maintained and operated by DNS hosting providers or registrars like Cloudflare, Namecheap, GoDaddy, and others.
 
 You can register authoritative name servers with domain name registrar such as GoDaddy, Namecheap, Verisign etc. 
 
 ### Recursive DNS Servers (Resolver)
+A DNS resolver (recursive resolver), is designed to receive DNS queries, which include a human-readable hostname such as “www.example.com", and is responsible for tracking the IP address for that hostname.
+
 Recursive servers temporarily store information they've previously retrieved, but when that information isn't available in cache, they have to get it from another server.
 
 Recursive servers handle DNS queries from client devices like computers and smartphones. When a device wants to resolve a domain name, it contacts these servers. Acting on behalf of the client, recursive servers traverse the DNS hierarchy, consulting various DNS servers to determine the IP address associated with a domain name. Once they obtain the answer, they return it to the client. For efficiency, recursive servers often cache responses to avoid repeatedly querying the same information.
@@ -159,4 +163,67 @@ Now, suppose you are an employee within XYZ Industries and one of your clients i
 16. The local resolver gives the address to your browser.
 
 17. Your browser commences an HTTP request to the Googleplex machine's IP address.
+
+![](./images/dns-resolution-process-example-2.jpeg)
+<sub>Sourced: Mohamed AbukarMohamed Abukar</sub>
+
+## How DNS Resolution Works?
+There are two main methods of query resolution in DNS:
+
+- Iterative query resolution
+- Recursive query resolution
+
+### Iterative Query Resolution
+
+In iterative query resolution, the DNS server receiving the query provides referrals to the querying server, guiding it through the DNS hierarchy. The querying server actively participates in the process by sending subsequent queries based on the referrals received. 
+
+![](./images/dns-non-recursive-queries.png)
+
+### Recursive Query Resolution
+In recursive query resolution, the DNS server receiving the query takes on the responsibility of finding the IP address on behalf of the client. It may itself use iterative queries to navigate through the DNS hierarchy until it reaches the authoritative DNS server for the requested domain. 
+
+When a client sends a recursive request to a name server, the server responds back with the answer if it has the information sought. If it doesn't, the server takes responsibility for finding the answer by becoming a client on behalf of the original client and sending new requests to other servers. The original client only sends one request, and eventually gets the information it wants (or an error message if it is not available).
+
+
+## DNS Types: 10 Top DNS Record Types
+
+DNS servers create a DNS record to provide important information about a domain or hostname, particularly its current IP address. The most common DNS record types are:
+
+- **`Address Mapping record (A Record)`** - also known as a DNS host record, stores a hostname and its corresponding IPv4 address.
+- **`IP Version 6 Address record (AAAA Record)`** - stores a hostname and its corresponding IPv6 address.
+- **`Canonical Name record (CNAME Record)`** - can be used to alias a hostname to another hostname. When a DNS client requests a record that contains a CNAME, which points to another hostname, the DNS resolution process is repeated with the new hostname.
+- **`Mail exchanger record (MX Record)`** - specifies an SMTP email server for the domain, used to route outgoing emails to an email server.
+- **`Name Server records (NS Record)`** - specifies that a DNS Zone, such as “example.com” is delegated to a specific Authoritative Name Server, and provides the address of the name server.
+- **`Reverse-lookup Pointer records (PTR Record)`** - allows a DNS resolver to provide an IP address and receive a hostname (reverse DNS lookup).
+- **`Certificate record (CERT Record)`** - stores encryption certificates-PKIX, SPKI, PGP, and so on.
+- **`Service Location (SRV Record)`** - a service location record, like MX but for other communication protocols.
+- **`Text Record (TXT Record)`** - typically carries machine-readable data such as opportunistic encryption, sender policy framework, DKIM, DMARC, etc.
+- **`Start of Authority (SOA Record)`** - this record appears at the beginning of a DNS zone file, and indicates the Authoritative Name Server for the current DNS zone, contact details for the domain administrator, domain serial number, and information on how frequently DNS information for this zone should be refreshed.
+
+## DNS resolution Example
+
+![](./images/google-dns-resolution-example.png)
+
+What the above response is telling us is the following:
+
+- The DNS server which serviced our request (returned us the IP) is 192.168.50.1, and the port used is port 53 (this is a well-defined port reserved for DNS)
+- The Non-authoritative answer to our request is that the domain google.com maps to the IP address 142.250.69.206
+
+Now you may be asking, what does it mean when the response specifies the answer is non-authoritative? As we discussed earlier, we expect DNS resolution to be handled eventually by an authoritative server, so from this description we can make the conclusion that that was not the case, and in fact, the server which returned us the IP address was in fact not an authoritative server.
+
+What this means is that this DNS resolution was handled by our local DNS server. This server is not an authoritative server, but since it caches DNS mappings, it has the capacity to provide an answer to DNS resolutions for domains which it has already serviced a request for in the past. (my guess is, nslookup for google.com will yield a non-authoritative answer for any of you following along as well)
+
+### What’s my Local DNS server?
+
+On Linux, we may try the below command, to check the resolver.conf file on our machine (this file stores information about the local DNS server configuration):
+
+On OS X, this is in fact not the reference I want to check (as the message so helpfully describes), but instead, we can check the local DNS server as done below:
+
+![](./images/whereabout-of-local-dns-server.png)
+
+Unpacking this a little further, we know the following information about our local DNS server:
+
+- The IP address of the server is 192.168.50.1 (confirming our hypothesis from earlier)
+- The network interface its corresponding resolver is associated with is en0 (this is a well-defined network interface for wi-fi)
+- We interact with this server by requesting A records (another way of saying what we get back is IP addresses)
 
