@@ -90,6 +90,16 @@ Elastic IP addresses are static or persistent public IPs that come with your acc
 
 **Usage:** Typically attached to a VPC and associated with a route in the main route table.
 
+![](./images/aws-vpc-igw.png)
+
+In this diagram, we've added the internet gateway that is providing the connection to the internet to your VPC. For an EC2 instance to be internet-connected, you have to adhere to the following rules:
+
+1. Attach an Internet gateway to your VPC 
+2. Ensure that your instances have either a public IP address or an elastic IP address 
+3. Point your subnet’s route table to the internet gateway 
+4. Make sure that your security group and network access control rules allow relevant traffic to flow in and out of your instance
+
+
 ## Subnets
 
 **Definition:** A range of IP addresses in your VPC.
@@ -131,9 +141,13 @@ Isolation:
     Private subnets provide an additional layer of isolation and security by limiting direct exposure to the internet.
 
 ## Route Tables
-**Definition:** A set of rules used to determine where network traffic is directed.
+**Definition:**
+- Amazon defines a route table as a set of rules, called routes, which are used to determine where network traffic is directed.
+- A set of rules used to determine where network traffic is directed.
 
 **Associations:**
+Each subnet has to be linked to a route table, and a subnet can only be linked to one route table. On the other hand, one route table can have associations with multiple subnets. Every VPC has a default route table, and it is a good practice to leave it in its original state and create a new route table to customize the network traffic routes associated with your VPC. The route table diagram is as shown:
+
   - **Main Route Table:** Automatically associated with the main subnet.
   - **Custom Route Table:** Created and associated with custom subnets.
 
@@ -144,14 +158,51 @@ Isolation:
 - Often used in private subnets for outbound internet access.
 - 
 
+![](./images/aws-vpc-routetables.png)
+
+> All traffic inside the private subnet remains local.
+
+## NAT Devices
+A Network Address Translation (NAT) device can be used to enable instances in a private subnet to connect to the internet or the AWS services, but this prevents the internet from initiating connections with the instances in a private subnet.
+
+Public and Private subnets protect your assets from being directly connected to the internet. For example, your web server would sit in the public subnet and database in the private subnet, which has no internet connectivity. However, your private subnet database instance might still need internet access or the ability to connect to other AWS resources. You can use a NAT device to do so. 
+
+The NAT device directs traffic from your private subnet to either the internet or other AWS services. It then sends the response back to your instances. When traffic is directed to the internet, the source IP address of your instance is replaced with the NAT device address, and when the internet traffic returns, the NAT device translates the address to your instance’s private IP address.
+
+![](./images/aws-vpc-NAT-device-diagram.JPG)
+
+## NAT Gateway vs. NAT Device
+AWS provides two kinds of NAT devices:
+
+- NAT gateway 
+- NAT instance 
+
+AWS recommends the NAT gateway because it is a managed service that provides better bandwidth and availability compared to NAT instances. Every NAT gateway is created in a specific availability zone and with redundancy in that zone. A NAT Amazon Machine Image (AMI) is used to launch a NAT instance, and it subsequently runs as an instance in your VPC.
+
+A NAT gateway must be launched in a public subnet because it needs internet connectivity. It also requires an elastic IP address, which you can select at the time of launch.
+
+Once created, you need to update the route table associated with your private subnet to point internet-bound traffic to the NAT gateway. This way, the instances in your private subnet can communicate with the internet.
+
+![](./images/aws-vpc-NAT-gateway.JPG)
+
 ## Security Group
 **Definition:** Acts as a virtual firewall for your instance to control inbound and outbound traffic.
+
+Rules are added to each security group, which allows traffic to or from its associated instances. Basically, a security group controls inbound and outbound traffic for one or more EC2 instances. It can be found on both the EC2 and VPC dashboards in the AWS web management console.
 
 **Rules:**
 - Specify allowed inbound and outbound traffic.
 - Two-Way Traffic: Security Groups are stateful, meaning if you allow inbound traffic, the corresponding outbound traffic is automatically allowed.
 - Simplified Rules: You define rules to allow traffic, and the Security Group automatically allows the response traffic. Its becaus eits statefull in nature.
 
+![](./images/aws-vpc-sg-1.JPG)
+
+### Example of Security Groups for Web Servers (pub;ic SUbnet)
+![](./images/aws-vpc-sg-2.JPG)
+
+### Example of Security Groups for DataStores (Private Subnet)
+![](./images/aws-vpc-sg-3.JPG)
+We've allowed the source to come from the internet. Because it's a Windows machine, you may need RDP access to log on and do some administration. We've also added RDP access to the security group. You could leave it open to the internet, but that would mean anyone could try and hack their way into your box. In this example, we've added a source IP address of 10.0.0.0, so the only IP ranges from that address can RDP to the instance.
 
 ## Network ACL (Access Control List)
 **Definition:** An optional layer of security for your VPC that acts as a firewall for controlling traffic in and out of one or more subnets.
@@ -159,6 +210,24 @@ Isolation:
 - Define rules for allowing or denying traffic.
 - Two-Way Traffic: NACLs are stateless, so you must define separate rules for inbound and outbound traffic.
 - Explicit Rules: If you allow inbound traffic, you need to explicitly allow the corresponding outbound traffic, and vice versa. Its because its stateless in nature.
+
+![](./images/aws-vpc-network-acl.JPG)
+
+You can find the Network ACLs located somewhere between the root tables and the subnets. Here is a simplified diagram:
+
+![](./images/aws-vpc-network-acl-2.JPG)
+
+You can see an example of the default network ACL, which is configured to allow all traffic to flow in and out of the subnet to which it is associated. 
+
+Each network ACL includes a rule an * (asterisk) as the rule number. The rule makes sure that if a packet is identified as not matching any of the other numbered rules, traffic is denied. You can't modify or remove this rule.
+
+For traffic coming on the inbound:
+
+- Rule 100 would allow traffic from all sources
+- Rule * would deny traffic from all sources
+
+![](./images/aws-vpc-network-acl-3.JPG)
+
 
 ## SG Vs NACL
 
